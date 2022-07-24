@@ -1,0 +1,18 @@
+module Types.Ids (
+    GateId(..),
+    TaxiwayId(..),
+    RunwayId(..)
+) where
+
+
+newtype GateId = GateId 
+    { giNumber : Int }
+    deriving (Eq, Show, Ord)
+
+newtype TaxiwayId = TaxiwayId
+    { tiNumber : Int }
+    deriving (Eq, Show, Ord)
+
+newtype RunwayId = RunwayId
+    { riNumber : Int }
+    deriving (Eq, Show, Ord)

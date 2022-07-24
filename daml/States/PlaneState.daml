@@ -1,0 +1,12 @@
+module States.PlaneState (
+    PlaneState(..),
+) where
+
+import Types.Airfield.Location (Location)
+import Types.Plane.Objective  (Objective)
+
+
+data PlaneState = PlaneState
+    { psLocation  : Location
+    , psObjective : Objective }
+    deriving (Eq, Show)

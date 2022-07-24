@@ -1,0 +1,115 @@
+module States.AirfieldState (
+    GateIdToOccupancy,
+    TaxiwayIdToCounter,
+    RunwayIdToOccupancy,
+
+    AirfieldState(..),
+
+    isGateAvailable,
+    getAvailableTaxiways,
+    getAvailableRunways,
+
+    gatesCardinality,
+    taxiwaysCardinality,
+    runwaysCardinality,
+    taxiwayCapacity,
+
+    initAirfieldState,
+    updateAirfieldState
+) where
+
+import Types.Airfield.Location (Location(..))
+import Types.Ids               (GateId(..), TaxiwayId(..), RunwayId(..))
+
+import qualified DA.Map as M (Map, member, lookup, keys, filter, fromList, insert, alter)
+
+
+type GateIdToOccupancy   = M.Map GateId Bool
+type TaxiwayIdToCounter  = M.Map TaxiwayId Int
+type RunwayIdToOccupancy = M.Map RunwayId Bool
+
+
+data AirfieldState = AirfieldState
+    { asGateIdToOccupancy   : GateIdToOccupancy
+    , asTaxiwayIdToCounter  : TaxiwayIdToCounter
+    , asRunwayIdToOccupancy : RunwayIdToOccupancy }
+    deriving (Eq, Show)
+
+
+isGateAvailable : GateId -> AirfieldState -> Bool
+isGateAvailable gateId state =
+    let gates = asGateIdToOccupancy state
+    in  M.member gateId gates && M.lookup gateId gates == Some True
+
+getAvailableTaxiways : AirfieldState -> [TaxiwayId]
+getAvailableTaxiways =
+    M.keys . M.filter (< taxiwayCapacity) . asTaxiwayIdToCounter
+
+getAvailableRunways : AirfieldState -> [RunwayId]
+getAvailableRunways =
+    M.keys . M.filter (== False) . asRunwayIdToOccupancy
+
+
+gatesCardinality, taxiwaysCardinality, runwaysCardinality, taxiwayCapacity : Int
+gatesCardinality    = 4
+taxiwaysCardinality = 2
+runwaysCardinality  = 1
+taxiwayCapacity     = 2
+
+
+initAirfieldState : AirfieldState
+initAirfieldState = AirfieldState
+    { asGateIdToOccupancy   = M.fromList $ map (\i -> (GateId i, False))   [1..gatesCardinality]
+    , asTaxiwayIdToCounter  = M.fromList $ map (\i -> (TaxiwayId i, 0))    [1..taxiwaysCardinality]
+    , asRunwayIdToOccupancy = M.fromList $ map (\i -> (RunwayId i, False)) [1..runwaysCardinality] }
+
+
+updateAirfieldState : AirfieldState -> Location -> Location -> Optional AirfieldState
+updateAirfieldState s oldLocation newLocation =
+    let g = asGateIdToOccupancy s
+        t = asTaxiwayIdToCounter s
+        r = asRunwayIdToOccupancy s
+    in case (oldLocation, newLocation) of
+        -- DEPARTURES
+        (Gate i, Taxiway j)   -> Some $ gateToTaxiway s i j g t
+        (Taxiway i, Runway j) -> Some $ taxiwayToRunway s i j t r
+        (Runway i, Sky)       -> Some $ runwayToSky s i r 
+
+        -- ARRIVALS
+        (Sky, Runway j)       -> Some $ skyToRunway s j r
+        (Runway i, Taxiway j) -> Some $ runwayToTaxiway s i j r t
+        (Taxiway i, Gate j)   -> Some $ taxiwayToGate s i j t g
+        
+        {- NOTE: Perhaps it'd be better to enumerate all permutations explicitly so that if one of the types
+           we are matching on expands, we would automatically know at compile time that we need to update
+           this function...nevertheless, the number of permutations grows exponentially, which makes this
+           strategy unfeasible even for a small number of choices... -}
+        _ -> None
+    where
+        gateToTaxiway : AirfieldState -> GateId -> TaxiwayId -> GateIdToOccupancy -> TaxiwayIdToCounter -> AirfieldState
+        gateToTaxiway s i j g t = s
+            { asGateIdToOccupancy  = M.insert i False g
+            , asTaxiwayIdToCounter = M.alter (fmap (+ 1)) j t }
+
+        taxiwayToRunway : AirfieldState -> TaxiwayId -> RunwayId -> TaxiwayIdToCounter -> RunwayIdToOccupancy -> AirfieldState
+        taxiwayToRunway s i j t r = s
+            { asTaxiwayIdToCounter  = M.alter (fmap ((-) 1)) i t
+            , asRunwayIdToOccupancy = M.insert j True r }
+
+        runwayToSky : AirfieldState -> RunwayId -> RunwayIdToOccupancy -> AirfieldState
+        runwayToSky s i r = s
+            { asRunwayIdToOccupancy = M.insert i False r }
+
+        skyToRunway : AirfieldState -> RunwayId -> RunwayIdToOccupancy -> AirfieldState
+        skyToRunway s j r = s
+            { asRunwayIdToOccupancy = M.insert j True r }
+
+        runwayToTaxiway : AirfieldState -> RunwayId -> TaxiwayId -> RunwayIdToOccupancy -> TaxiwayIdToCounter -> AirfieldState
+        runwayToTaxiway s i j r t = s
+            { asRunwayIdToOccupancy = M.insert i False r
+            , asTaxiwayIdToCounter  = M.alter (fmap (+ 1)) j t }
+        
+        taxiwayToGate : AirfieldState -> TaxiwayId -> GateId -> TaxiwayIdToCounter -> GateIdToOccupancy -> AirfieldState
+        taxiwayToGate s i j t g = s
+            { asTaxiwayIdToCounter = M.alter (fmap ((-) 1)) i t
+            , asGateIdToOccupancy  = M.insert j True g }

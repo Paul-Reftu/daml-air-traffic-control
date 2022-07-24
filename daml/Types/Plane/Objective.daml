@@ -1,0 +1,11 @@
+module Types.Plane.Objective (
+    Objective(..)
+) where
+
+import Types.Ids (GateId)
+
+
+data Objective
+    = Depart
+    | Arrive GateId
+    deriving (Eq, Show)

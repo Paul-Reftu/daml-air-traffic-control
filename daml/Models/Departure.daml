@@ -1,0 +1,15 @@
+module Models.Departure (
+    Departure(..)  
+) where
+
+import Types.Departure.Outcome (Outcome)
+
+
+template Departure
+    with
+        captain : Party
+        atc     : Party
+        outcome : Outcome
+    where
+        signatory captain
+        observer atc

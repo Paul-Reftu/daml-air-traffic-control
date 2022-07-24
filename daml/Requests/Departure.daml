@@ -1,0 +1,72 @@
+module Requests.Departure (
+    DepartureInProgress(..),
+    DepartureRequest(..)
+) where
+
+import DA.Exception (ActionThrow(throw))
+
+
+import Exceptions.NoNextPlaneRequest (NoNextPlaneRequest(..))
+
+import Models.AirTrafficControl (AirTrafficControl(..))
+import Models.Departure         (Departure(..))
+
+import States.AirfieldState (updateAirfieldState)
+import States.PlaneState    (PlaneState(..))
+
+import Types.Airfield.Location (Location(..))
+import Types.Departure.Outcome (Outcome(..))
+import Types.Plane.Request     (Request(..), nextRequest, trySatisfyingRequest)
+
+import qualified DA.Optional as O (isSome, fromSome)
+
+
+template DepartureInProgress
+    with
+        captain : Party
+        atc     : Party
+        plane   : PlaneState
+    where
+        signatory captain
+        observer atc
+        choice SubmitDepartureRequest : ContractId DepartureRequest
+            controller captain
+            do case nextRequest plane of
+                Some r -> create DepartureRequest  with request = r; ..
+                None   -> throw NoNextPlaneRequest with planeLocation = psLocation plane
+
+
+template DepartureRequest
+    with
+        captain : Party
+        atc     : Party
+        plane   : PlaneState
+        request : Request
+    where
+        signatory captain
+        observer atc
+        choice ApproveDepartureRequest : Either (ContractId DepartureInProgress) (ContractId Departure)
+            controller atc
+            do
+                (atcContractId, atcContract) <- fetchByKey @AirTrafficControl atc
+                let airfield         = airfieldState atcContract
+                    maybeDestination = trySatisfyingRequest request plane airfield
+                assert $ O.isSome maybeDestination
+
+                let position         = psLocation plane
+                    destination      = O.fromSome maybeDestination
+                    maybeNewAirfield = updateAirfieldState airfield position destination
+                assert $ O.isSome maybeNewAirfield
+
+                archive atcContractId
+                create AirTrafficControl
+                    with
+                        officer       = atc
+                        airfieldState = O.fromSome maybeNewAirfield
+
+                if destination /= Sky then do
+                    response <- create DepartureInProgress with plane = plane {psLocation = destination}; ..
+                    return $ Left response
+                else do
+                    response <- create Departure with outcome = Success; ..
+                    return $ Right response

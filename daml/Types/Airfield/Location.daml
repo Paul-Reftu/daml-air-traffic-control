@@ -1,0 +1,13 @@
+module Types.Airfield.Location (
+    Location(..)
+) where
+
+import Types.Ids (GateId, TaxiwayId, RunwayId)
+
+
+data Location
+    = Gate    GateId
+    | Taxiway TaxiwayId
+    | Runway  RunwayId
+    | Sky
+    deriving (Eq, Show)

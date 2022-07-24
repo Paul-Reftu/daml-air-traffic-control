@@ -1,0 +1,70 @@
+module Types.Plane.Request (
+    Request(..),
+    nextRequest,
+    trySatisfyingRequest
+) where
+
+import DA.List (head)
+
+import States.AirfieldState (AirfieldState(..), isGateAvailable, getAvailableTaxiways, getAvailableRunways)
+import States.PlaneState    (PlaneState(..))
+
+import Types.Airfield.Location (Location(..))
+import Types.Ids               (GateId, TaxiwayId, RunwayId)
+import Types.Plane.Objective   (Objective(..))
+
+
+data Request
+    = RequestForGate GateId
+    | RequestForTaxiway
+    | RequestForRunway
+    | RequestForTakeOff
+    deriving (Eq, Show)
+
+
+nextRequest : PlaneState -> Optional Request
+nextRequest ps = case (psLocation ps, psObjective ps) of
+    -- DEPARTURES
+    (Gate _, Depart)    -> Some RequestForTaxiway
+    (Taxiway _, Depart) -> Some RequestForRunway
+    (Runway _, Depart)  -> Some RequestForTakeOff
+    (Sky, Depart)       -> None
+
+    -- ARRIVALS
+    (Sky, Arrive _)       -> Some RequestForRunway
+    (Runway _, Arrive _)  -> Some RequestForTaxiway
+    (Taxiway _, Arrive j) -> Some $ RequestForGate j
+    (Gate _, Arrive _)    -> None
+
+
+trySatisfyingRequest : Request -> PlaneState -> AirfieldState -> Optional Location
+trySatisfyingRequest request plane airfield = case (psLocation plane, psObjective plane, request) of
+    -- DEPARTURES
+    (Gate _, Depart, RequestForTaxiway)   -> firstAvailableTaxiway
+    (Taxiway _, Depart, RequestForRunway) -> firstAvailableRunway
+    (Runway _, Depart, RequestForTakeOff) -> Some Sky
+    
+    -- ARRIVALS
+    (Sky, Arrive _, RequestForRunway)       -> firstAvailableRunway
+    (Runway _, Arrive _, RequestForTaxiway) -> firstAvailableTaxiway
+    (Taxiway _, Arrive i, RequestForGate j) ->
+        if i /= j || not (isGateAvailable i airfield) then None
+        else Some $ Gate i
+    
+    _ -> None
+    where
+        availableTaxiways : [TaxiwayId]
+        availableTaxiways = getAvailableTaxiways airfield
+
+        availableRunways : [RunwayId]
+        availableRunways  = getAvailableRunways  airfield
+
+        firstAvailableTaxiway : Optional Location
+        firstAvailableTaxiway =
+            if null availableTaxiways then None
+            else Some $ Taxiway $ head availableTaxiways
+        
+        firstAvailableRunway : Optional Location
+        firstAvailableRunway =
+            if null availableRunways then None
+            else Some $ Runway $ head availableRunways

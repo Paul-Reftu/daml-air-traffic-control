@@ -1,0 +1,9 @@
+module Types.Departure.Outcome (
+    Outcome(..)
+) where
+
+
+data Outcome
+    = Success
+    | Failure
+    deriving (Eq, Show)

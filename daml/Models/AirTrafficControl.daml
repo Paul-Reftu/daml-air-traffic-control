@@ -1,0 +1,15 @@
+module Models.AirTrafficControl (
+    AirTrafficControl(..)
+) where
+
+import States.AirfieldState (AirfieldState)
+
+
+template AirTrafficControl
+    with
+        officer       : Party
+        airfieldState : AirfieldState
+    where
+        signatory officer
+        key officer : Party
+        maintainer key

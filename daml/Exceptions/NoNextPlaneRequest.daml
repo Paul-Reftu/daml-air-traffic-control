@@ -1,0 +1,12 @@
+module Exceptions.NoNextPlaneRequest (
+    NoNextPlaneRequest(..)
+) where
+
+import Types.Airfield.Location (Location)
+
+
+exception NoNextPlaneRequest
+    with
+        planeLocation : Location
+    where
+        message "Attempted to get next plane request for a location that doesn't have one: " <> show planeLocation

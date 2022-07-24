@@ -1,3 +1,7 @@
+{-| Abstract data type (ADT) representing possible reasons for a flight movement request being
+    considered illegal.
+ -}
+
 module Exceptions.IllegalMovementRequest (
     IllegalMovementRequest(..)
 ) where

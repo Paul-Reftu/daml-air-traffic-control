@@ -1,3 +1,5 @@
+{-| Custom DAML exception for attempting to get a successor for a final flight state (e.g., Sky). -}
+
 module Exceptions.NoNextPlaneRequest (
     NoNextPlaneRequest(..)
 ) where
@@ -9,4 +11,4 @@ exception NoNextPlaneRequest
     with
         planeLocation : Location
     where
-        message "Attempted to get next plane request for a location that doesn't have one: " <> show planeLocation
+        message "Attempted to get a successor request for a final flight state: " <> show planeLocation

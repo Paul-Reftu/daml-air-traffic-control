@@ -1,3 +1,5 @@
+{-| Possible requests a flight may send to ATC, along with other useful utility methods. -}
+
 module Types.Plane.Request (
     Request(..),
     nextRequest,
@@ -24,6 +26,7 @@ data Request
     deriving (Eq, Show)
 
 
+-- | Get the next possible request a flight may have (deterministic process leads to deterministic choice).
 nextRequest : PlaneState -> Optional Request
 nextRequest ps = case (psLocation ps, psObjective ps) of
     -- DEPARTURES
@@ -39,6 +42,7 @@ nextRequest ps = case (psLocation ps, psObjective ps) of
     (Gate _, Arrive _)    -> None
 
 
+-- | If possible, try obtaining the next location based on a given request, flight state and airfield state.
 trySatisfyingRequest : Request -> PlaneState -> AirfieldState -> Either IllegalMovementRequest Location
 trySatisfyingRequest request plane airfield = case (psLocation plane, psObjective plane, request) of
     -- DEPARTURES

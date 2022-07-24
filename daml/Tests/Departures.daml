@@ -1,10 +1,12 @@
+{-| Unit tests for flight departures. -}
+
 module Tests.Departures (
     test
 ) where
 
 import Daml.Script
 
-import States.PlaneState    (PlaneState(..))
+import States.PlaneState (PlaneState(..))
 
 import Tests.Util (distGateToSky, submitFIPAndAssertFlightSuccess)
 
@@ -26,6 +28,7 @@ planesAtGates : [PlaneState]
 planesAtGates = [planeG1, planeG2, planeG3, planeG4]
 
 
+-- | Entry point.
 test : Party -> Party -> Script ()
 test cpt atc = script $ do
     testAnyNumberOfPlanesCanDepartConsecutivelyFromG1 cpt atc

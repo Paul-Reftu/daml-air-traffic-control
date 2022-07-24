@@ -1,3 +1,5 @@
+{-| ADT for an airfield's checkpoints through which planes will move. -}
+
 module Types.Airfield.Location (
     Location(..)
 ) where

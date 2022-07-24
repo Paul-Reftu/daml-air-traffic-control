@@ -1,3 +1,5 @@
+{-| Possible missions a flight may be on. Presently limited to airfield departure and arrival. -}
+
 module Types.Plane.Objective (
     Objective(..)
 ) where

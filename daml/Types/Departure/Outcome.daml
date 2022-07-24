@@ -1,3 +1,5 @@
+{-| Outcome of a Flight in Progress (FIP). Currently, only `Success` is modelled. -}
+
 module Types.Departure.Outcome (
     Outcome(..)
 ) where

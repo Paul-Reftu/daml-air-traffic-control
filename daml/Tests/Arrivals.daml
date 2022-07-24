@@ -1,3 +1,5 @@
+{-| Unit test coverage for flight arrivals. -}
+
 module Tests.Arrivals (
     test
 ) where
@@ -15,6 +17,7 @@ import Types.Plane.Objective   (Objective(..))
 import qualified DA.Foldable as F (forA_)
 
 
+-- | Convenient definitions for planes spawning in the sky and travelling to a gate.
 planeSkyToG1, planeSkyToG2, planeSkyToG3, planeSkyToG4 : PlaneState
 planeSkyToG1 = PlaneState Sky $ Arrive (GateId 1)
 planeSkyToG2 = PlaneState Sky $ Arrive (GateId 2)
@@ -26,6 +29,7 @@ planesInSky : [PlaneState]
 planesInSky = [planeSkyToG1, planeSkyToG2, planeSkyToG3, planeSkyToG4]
 
 
+-- | Test entry point.
 test : Party -> Party -> Script ()
 test cpt atc = script $
     testPlanesCanArriveAtAnyGate cpt atc

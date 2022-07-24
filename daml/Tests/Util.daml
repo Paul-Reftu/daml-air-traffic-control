@@ -1,3 +1,5 @@
+{-| Test utilities abstracting away a large portion of the test functions. -}
+
 module Tests.Util (
     distGateToSky,
     distSkyToGate,
@@ -13,8 +15,8 @@ import DA.Assert (assertEq)
 import Daml.Script
 
 import Contracts.AirTrafficControl (AirTrafficControl(..))
-import Contracts.FlightInProgress (FlightInProgress(..), SubmitMovementRequest(..), ProcessMovementRequest(..))
-import Contracts.FlightSummary    (FlightSummary(..))
+import Contracts.FlightInProgress  (FlightInProgress(..), SubmitMovementRequest(..), ProcessMovementRequest(..))
+import Contracts.FlightSummary     (FlightSummary(..))
 
 import States.AirfieldState (AirfieldState)
 import States.PlaneState    (PlaneState)
@@ -25,21 +27,25 @@ import qualified DA.Either   as E (lefts, rights)
 import qualified DA.Optional as O (isSome, fromSome)
 
 
+-- | Distance in terms of states from one location to another.
 distGateToSky, distSkyToGate : Int
 distGateToSky = 3
 distSkyToGate = distGateToSky
 
 
+-- | Air Traffic Control contract instance.
 createATC : Party -> AirfieldState -> Commands (ContractId AirTrafficControl)
 createATC officer airfieldState =
     createCmd AirTrafficControl with ..
 
 
+-- | Flight in Progress contract instance.
 createFIP : Party -> Party -> PlaneState -> Commands (ContractId FlightInProgress)
 createFIP captain atc plane =
     createCmd FlightInProgress with ..
 
 
+-- | Check if a given flight can complete its course recursively. Logic abstracted away by util function below.
 assertFlightSuccess
     :  Either (ContractId FlightInProgress) (ContractId FlightSummary)
     -> Int
@@ -50,6 +56,7 @@ assertFlightSuccess eitherFipFs stepsUntilDestination cpt atc =
     assertFlightSuccessForNSteps eitherFipFs stepsUntilDestination stepsUntilDestination cpt atc
 
 
+-- | Check if a given flight can complete the next N steps in its course.
 assertFlightSuccessForNSteps
     :  Either (ContractId FlightInProgress) (ContractId FlightSummary)
     -> Int
@@ -78,6 +85,7 @@ assertFlightSuccessForNSteps eitherFipFs stepsUntilDestination stepsToTake cpt a
                 assertEq (outcome $ O.fromSome fs) Success
 
 
+-- | Convenient method for submitting an FIP and checking if it is successful.
 submitFIPAndAssertFlightSuccess : Party -> Party -> Int -> PlaneState -> Script ()
 submitFIPAndAssertFlightSuccess cpt atc distToSky plane = do
     fipId <- submit cpt $ createFIP cpt atc plane

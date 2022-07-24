@@ -1,6 +1,14 @@
+{-|
+    Flights in Progress (FIPs) are initiated by a pilot in command (PIC / Captain) and they are
+    visible to the ATC unit. FIPs can submit movement requests in order for the flight to proceed
+    (e.g., a PIC can request to move from a gate to a taxiway, then to a runway etc.). ATC is responsible
+    for approving or rejecting PIC requests.
+ -}
+
 module Contracts.FlightInProgress (
     FlightInProgress(..),
     SubmitMovementRequest(..),
+    
     MovementRequest(..),
     ProcessMovementRequest(..),
     RejectMovementRequest(..),
@@ -25,69 +33,79 @@ import Types.Departure.Outcome (Outcome(..))
 import Types.Plane.Objective   (Objective(..))
 import Types.Plane.Request     (Request(..), nextRequest, trySatisfyingRequest)
 
+
 import qualified DA.Either   as E (isLeft, fromLeft, fromRight)
 import qualified DA.Optional as O (isNone, fromSome)
 
 
 template FlightInProgress
     with
-        captain : Party
-        atc     : Party
-        plane   : PlaneState
+        captain : Party      -- ^ The PIC/Captain of the flight.
+        atc     : Party      -- ^ Air Traffic Control.
+        plane   : PlaneState -- ^ Current state of the flight.
     where
         signatory captain
         observer atc
+        -- | Request to move towards completing objective.
         choice SubmitMovementRequest : ContractId MovementRequest
             controller captain
             do case nextRequest plane of
+                -- | Create a contract for the request if there is a next move for the PIC to make.
                 Some r -> create MovementRequest   with request = r; ..
+                -- | If there is no possible move from the current state, raise an appropriate exception.
                 None   -> throw NoNextPlaneRequest with planeLocation = psLocation plane
 
 
 template MovementRequest
     with
-        captain : Party
-        atc     : Party
-        plane   : PlaneState
-        request : Request
+        captain : Party      -- ^ PIC/Captain that raised the request.
+        atc     : Party      -- ^ Air Traffic Control.
+        plane   : PlaneState -- ^ Current flight state.
+        request : Request    -- ^ The request itself.
     where
         signatory captain
         observer atc
         nonconsuming choice ProcessMovementRequest : (Either (ContractId FlightInProgress) (ContractId FlightSummary))
             controller atc
             do
+                -- | Obtain the intel the ATC has about the airfield to determine whether to approve/reject the request.
                 (atcContractId, atcContract) <- fetchByKey @AirTrafficControl atc
 
                 let airfield                   = airfieldState atcContract
                     eitherExceptionDestination = trySatisfyingRequest request plane airfield
+                -- | If the request cannot be approved, motion a rejection contract containing the reason.
                 when (E.isLeft eitherExceptionDestination) $
                     exercise self RejectMovementRequest with reason = E.fromLeft Unknown eitherExceptionDestination
 
                 let position         = psLocation plane
                     destination      = E.fromRight Sky eitherExceptionDestination
                     maybeNewAirfield = updateAirfieldState airfield position destination
+                -- | If the airfield state cannot be updated, motion a rejection contract stating the reason.
                 when (O.isNone maybeNewAirfield) $
                     exercise self RejectMovementRequest with reason = ImpossibleTransition
                 
+                -- | Otherwise, motion for approval.
                 exercise self ApproveMovementRequest with newAirfield = O.fromSome maybeNewAirfield; ..
         
 
         choice RejectMovementRequest : ()
             with
-                reason : IllegalMovementRequest
+                reason : IllegalMovementRequest -- ^ Reason for PIC movement rejection.
             controller atc
             do
+                -- | Create rejection contract and archive movement request.
                 create RejectedMovementRequest with ..
                 archive self
         
 
         choice ApproveMovementRequest : Either (ContractId FlightInProgress) (ContractId FlightSummary)
             with
-                atcContractId : ContractId AirTrafficControl
-                destination   : Location
-                newAirfield   : AirfieldState
+                atcContractId : ContractId AirTrafficControl -- ^ Contract ID for Air Traffic Control.
+                destination   : Location                     -- ^ Flight target location.
+                newAirfield   : AirfieldState                -- ^ New state of the airfield after processing.
             controller atc
             do
+                -- | Archive old ATC contract and create new one containing the new state of the airfield.
                 archive atcContractId
                 create AirTrafficControl
                     with
@@ -101,6 +119,8 @@ template MovementRequest
                         response <- create FlightInProgress with plane = plane {psLocation = destination}; ..
                         return $ Left response
 
+                {-| If the movement request is the last one in the flight procedure, create a flight summary contract.
+                  Otherwise, create a new FIP contract with the updated location. -}
                 case (psObjective plane, destination) of
                     (Depart, Sky)      -> summaryResponse
                     (Depart, _)        -> progressResponse
@@ -110,9 +130,9 @@ template MovementRequest
 
 template RejectedMovementRequest
     with
-        atc     : Party
-        captain : Party
-        reason  : IllegalMovementRequest
+        atc     : Party                   -- ^ Air Traffic Control.
+        captain : Party                   -- ^ PIC/Captain of the flight.
+        reason  : IllegalMovementRequest  -- ^ Reason for PIC request rejection.
     where
         signatory atc
         observer captain

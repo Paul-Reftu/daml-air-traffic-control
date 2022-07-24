@@ -1,3 +1,9 @@
+{-|
+    A smart contract for an Air Traffic Control (ATC) unit is visible to ATC Officers and
+    it tracks the most recently recorded state of an airfield. Can be uniquely identified
+    given the ATC Officer party.
+ -}
+
 module Contracts.AirTrafficControl (
     AirTrafficControl(..)
 ) where
@@ -7,8 +13,8 @@ import States.AirfieldState (AirfieldState)
 
 template AirTrafficControl
     with
-        officer       : Party
-        airfieldState : AirfieldState
+        officer       : Party         -- ^ Air Traffic Control Officer.
+        airfieldState : AirfieldState -- ^ Current state of the airfield.
     where
         signatory officer
         key officer : Party

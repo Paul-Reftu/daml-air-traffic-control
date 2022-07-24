@@ -1,3 +1,7 @@
+{-| ADT representing the state of an airfield at a given point. Initialisation, update
+    and helper methods included.
+ -}
+
 module States.AirfieldState (
     GateIdToOccupancy,
     TaxiwayIdToCounter,
@@ -24,11 +28,14 @@ import Types.Ids               (GateId(..), TaxiwayId(..), RunwayId(..))
 import qualified DA.Map as M (Map, member, lookup, keys, filter, fromList, insert, alter)
 
 
+{-| Handy type synonyms for tracking the occupancy of an airfield's checkpoints. Aids the ATC in approving/rejecting
+    movement requests. -}
 type GateIdToOccupancy   = M.Map GateId Bool
 type TaxiwayIdToCounter  = M.Map TaxiwayId Int
 type RunwayIdToOccupancy = M.Map RunwayId Bool
 
 
+-- | ADT representing an airfield's state. 
 data AirfieldState = AirfieldState
     { asGateIdToOccupancy   : GateIdToOccupancy
     , asTaxiwayIdToCounter  : TaxiwayIdToCounter
@@ -36,20 +43,24 @@ data AirfieldState = AirfieldState
     deriving (Eq, Show)
 
 
+-- | Check whether a gate is occupied, given the airfield's state.
 isGateAvailable : GateId -> AirfieldState -> Bool
 isGateAvailable gateId state =
     let gates = asGateIdToOccupancy state
     in  M.member gateId gates && M.lookup gateId gates == Some False
 
+-- | Obtain all available taxiways (those that are underfull).
 getAvailableTaxiways : AirfieldState -> [TaxiwayId]
 getAvailableTaxiways =
     M.keys . M.filter (< taxiwayCapacity) . asTaxiwayIdToCounter
 
+-- | Obtain all available runways.
 getAvailableRunways : AirfieldState -> [RunwayId]
 getAvailableRunways =
     M.keys . M.filter (== False) . asRunwayIdToOccupancy
 
 
+-- | Convenient definitions for airfield checkpoint cardinalities and capacities.
 gatesCardinality, taxiwaysCardinality, runwaysCardinality, taxiwayCapacity : Int
 gatesCardinality    = 4
 taxiwaysCardinality = 2
@@ -57,6 +68,7 @@ runwaysCardinality  = 1
 taxiwayCapacity     = 2
 
 
+-- | A clean airfield state with no record of airplanes on the ground.
 initAirfieldState : AirfieldState
 initAirfieldState = AirfieldState
     { asGateIdToOccupancy   = M.fromList $ map (\i -> (GateId i, False))   [1..gatesCardinality]
@@ -64,6 +76,10 @@ initAirfieldState = AirfieldState
     , asRunwayIdToOccupancy = M.fromList $ map (\i -> (RunwayId i, False)) [1..runwaysCardinality] }
 
 
+{-| Update airfield state given a plane movement from an old location to a new one. E.g,
+    if a plane moves from Gate 1 to Taxiway 2, then Gate 1 will be recorded as free and
+    Taxiway 2's counter will be incremented.
+ -}
 updateAirfieldState : AirfieldState -> Location -> Location -> Optional AirfieldState
 updateAirfieldState s oldLocation newLocation =
     let g = asGateIdToOccupancy s
@@ -82,8 +98,8 @@ updateAirfieldState s oldLocation newLocation =
         
         {- NOTE: Perhaps it'd be better to enumerate all permutations explicitly so that if one of the types
            we are matching on expands, we would automatically know at compile time that we need to update
-           this function...nevertheless, the number of permutations grows exponentially, which makes this
-           strategy unfeasible even for a small number of choices... -}
+           this function (due to non-exhaustive pattern matching error)...nevertheless, the number of permutations
+           grows exponentially, which makes this strategy unfeasible even for a small number of choices... -}
         _ -> None
     where
         gateToTaxiway : AirfieldState -> GateId -> TaxiwayId -> GateIdToOccupancy -> TaxiwayIdToCounter -> AirfieldState

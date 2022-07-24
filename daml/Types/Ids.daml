@@ -1,3 +1,5 @@
+{-| Simple newtypes for airfield checkpoint identifiers. -}
+
 module Types.Ids (
     GateId(..),
     TaxiwayId(..),

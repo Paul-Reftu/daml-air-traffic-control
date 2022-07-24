@@ -1,3 +1,5 @@
+{-| A contract summarising simple details and outcome of a flight once its procedure is over. -}
+
 module Contracts.FlightSummary (
     FlightSummary(..)  
 ) where
@@ -9,10 +11,10 @@ import Types.Departure.Outcome (Outcome)
 
 template FlightSummary
     with
-        captain : Party
-        atc     : Party
-        plane   : PlaneState
-        outcome : Outcome
+        captain : Party      -- ^ Flight PIC/Captain.
+        atc     : Party      -- ^ Air Traffic Control.
+        plane   : PlaneState -- ^ Current flight state.
+        outcome : Outcome    -- ^ Outcome of the flight.
     where
         signatory captain
         observer atc

@@ -1,3 +1,5 @@
+{-| Entry point for project unit test coverage. -}
+
 module Tests.Main (
     test
 ) where

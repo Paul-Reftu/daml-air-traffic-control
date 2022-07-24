@@ -6,7 +6,6 @@ module Types.Plane.Request (
 
 import DA.List      (head)
 
-
 import Exceptions.IllegalMovementRequest (IllegalMovementRequest(..))
 
 import States.AirfieldState (AirfieldState(..), isGateAvailable, getAvailableTaxiways, getAvailableRunways)

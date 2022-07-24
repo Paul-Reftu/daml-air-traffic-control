@@ -1,6 +1,10 @@
 module Contracts.FlightInProgress (
     FlightInProgress(..),
-    MovementRequest(..)
+    SubmitMovementRequest(..),
+    MovementRequest(..),
+    ProcessMovementRequest(..),
+    RejectMovementRequest(..),
+    ApproveMovementRequest(..)
 ) where
 
 import DA.Action    (when)
@@ -49,7 +53,7 @@ template MovementRequest
     where
         signatory captain
         observer atc
-        choice ProcessMovementRequest : (Either (ContractId FlightInProgress) (ContractId FlightSummary))
+        nonconsuming choice ProcessMovementRequest : (Either (ContractId FlightInProgress) (ContractId FlightSummary))
             controller atc
             do
                 (atcContractId, atcContract) <- fetchByKey @AirTrafficControl atc

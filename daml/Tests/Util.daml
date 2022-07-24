@@ -1,0 +1,70 @@
+module Tests.Util (
+    createATC,
+    createFIP,
+    assertFlightSuccess,
+    assertFlightSuccessForNSteps
+) where
+
+import DA.Assert (assertEq)
+
+import Daml.Script
+
+import Contracts.AirTrafficControl (AirTrafficControl(..))
+import Contracts.FlightInProgress (FlightInProgress(..), SubmitMovementRequest(..), ProcessMovementRequest(..))
+import Contracts.FlightSummary    (FlightSummary(..))
+
+import States.AirfieldState (AirfieldState)
+import States.PlaneState    (PlaneState)
+
+import Types.Departure.Outcome (Outcome(..))
+
+import qualified DA.Either   as E (lefts, rights)
+import qualified DA.Optional as O (isSome, fromSome)
+
+
+createATC : Party -> AirfieldState -> Commands (ContractId AirTrafficControl)
+createATC officer airfieldState =
+    createCmd AirTrafficControl with ..
+
+
+createFIP : Party -> Party -> PlaneState -> Commands (ContractId FlightInProgress)
+createFIP captain atc plane =
+    createCmd FlightInProgress with ..
+
+
+assertFlightSuccess
+    :  Either (ContractId FlightInProgress) (ContractId FlightSummary)
+    -> Int
+    -> Party
+    -> Party
+    -> Script ()
+assertFlightSuccess eitherFipFs stepsUntilDestination cpt atc =
+    assertFlightSuccessForNSteps eitherFipFs stepsUntilDestination stepsUntilDestination cpt atc
+
+
+assertFlightSuccessForNSteps
+    :  Either (ContractId FlightInProgress) (ContractId FlightSummary)
+    -> Int
+    -> Int
+    -> Party
+    -> Party
+    -> Script ()
+assertFlightSuccessForNSteps eitherFipFs stepsUntilDestination stepsToTake cpt atc = script $ 
+    if stepsToTake == 0 then
+        pure ()
+    else do
+        case eitherFipFs of
+            Left fipId -> do
+                request        <- submit cpt $ exerciseCmd fipId SubmitMovementRequest
+                newEitherFipFs <- submit atc $ exerciseCmd request ProcessMovementRequest
+
+                if stepsUntilDestination > 1 then
+                    assert $ not $ null $ E.lefts [newEitherFipFs]
+                else do
+                    assert $ not $ null $ E.rights [newEitherFipFs]
+
+                assertFlightSuccessForNSteps newEitherFipFs (stepsUntilDestination - 1) (stepsToTake - 1) cpt atc
+            Right fsId -> do
+                fs <- queryContractId cpt fsId
+                assert $ O.isSome fs
+                assertEq (outcome $ O.fromSome fs) Success

@@ -1,0 +1,43 @@
+module Tests.Departures (
+    test
+) where
+
+import Daml.Script
+
+import States.AirfieldState (initAirfieldState)
+import States.PlaneState    (PlaneState(..))
+
+import Tests.Util (createATC, createFIP, assertFlightSuccess)
+
+import Types.Airfield.Location (Location(..))
+import Types.Ids               (GateId(..))
+import Types.Plane.Objective   (Objective(..))
+
+
+planeG1, planeG2, planeG3 : PlaneState
+planeG1 = PlaneState (Gate $ GateId 1) Depart
+planeG2 = PlaneState (Gate $ GateId 2) Depart
+planeG3 = PlaneState (Gate $ GateId 3) Depart
+
+distGateToSky, distTaxiwayToSky, distRunwayToSky : Int
+distGateToSky    = 3
+distTaxiwayToSky = 2
+distRunwayToSky  = 1
+
+
+test : Script ()
+test = script $ do
+    andrew <- allocateParty "ATC Officer Andrew"
+    paul   <- allocateParty "Captain Paul"
+    submit andrew $ createATC andrew initAirfieldState
+
+    g1FipId <- submit paul $ createFIP paul andrew planeG1
+    assertFlightSuccess (Left g1FipId) 3 paul andrew
+
+    g2FipId <- submit paul $ createFIP paul andrew planeG2
+    assertFlightSuccess (Left g2FipId) 3 paul andrew
+
+    g3FipId <- submit paul $ createFIP paul andrew planeG3
+    assertFlightSuccess (Left g3FipId) 3 paul andrew
+
+

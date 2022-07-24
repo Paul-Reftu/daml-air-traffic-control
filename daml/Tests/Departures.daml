@@ -7,17 +7,25 @@ import Daml.Script
 import States.AirfieldState (initAirfieldState)
 import States.PlaneState    (PlaneState(..))
 
-import Tests.Util (createATC, createFIP, assertFlightSuccess)
+import Tests.Util (createATC, createFIP, assertFlightSuccess, submitFIPAndAssertFlightSuccess)
 
 import Types.Airfield.Location (Location(..))
 import Types.Ids               (GateId(..))
 import Types.Plane.Objective   (Objective(..))
 
+import qualified DA.Foldable as F (forA_)
 
-planeG1, planeG2, planeG3 : PlaneState
+
+planeG1, planeG2, planeG3, planeG4 : PlaneState
 planeG1 = PlaneState (Gate $ GateId 1) Depart
 planeG2 = PlaneState (Gate $ GateId 2) Depart
 planeG3 = PlaneState (Gate $ GateId 3) Depart
+planeG4 = PlaneState (Gate $ GateId 4) Depart
+
+
+planesAtGates : [PlaneState]
+planesAtGates = [planeG1, planeG2, planeG3, planeG4]
+
 
 distGateToSky, distTaxiwayToSky, distRunwayToSky : Int
 distGateToSky    = 3
@@ -31,13 +39,18 @@ test = script $ do
     paul   <- allocateParty "Captain Paul"
     submit andrew $ createATC andrew initAirfieldState
 
-    g1FipId <- submit paul $ createFIP paul andrew planeG1
-    assertFlightSuccess (Left g1FipId) 3 paul andrew
-
-    g2FipId <- submit paul $ createFIP paul andrew planeG2
-    assertFlightSuccess (Left g2FipId) 3 paul andrew
-
-    g3FipId <- submit paul $ createFIP paul andrew planeG3
-    assertFlightSuccess (Left g3FipId) 3 paul andrew
+    testAnyNumberOfPlanesCanDepartConsecutivelyFromG1 paul andrew
+    testAnyNumberOfPlanesCanDepartConsecutivelyFromAnyGate paul andrew
 
 
+testAnyNumberOfPlanesCanDepartConsecutivelyFromG1 : Party -> Party -> Script ()
+testAnyNumberOfPlanesCanDepartConsecutivelyFromG1 cpt atc = script $
+    let noOfPlanes = 10
+    in  F.forA_ [1..noOfPlanes] $ \_ ->
+        submitFIPAndAssertFlightSuccess cpt atc distGateToSky planeG1
+
+
+testAnyNumberOfPlanesCanDepartConsecutivelyFromAnyGate : Party -> Party -> Script ()
+testAnyNumberOfPlanesCanDepartConsecutivelyFromAnyGate cpt atc = script $
+    F.forA_ planesAtGates $ \plane ->
+        submitFIPAndAssertFlightSuccess cpt atc distGateToSky plane

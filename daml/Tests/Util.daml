@@ -2,7 +2,8 @@ module Tests.Util (
     createATC,
     createFIP,
     assertFlightSuccess,
-    assertFlightSuccessForNSteps
+    assertFlightSuccessForNSteps,
+    submitFIPAndAssertFlightSuccess
 ) where
 
 import DA.Assert (assertEq)
@@ -68,3 +69,9 @@ assertFlightSuccessForNSteps eitherFipFs stepsUntilDestination stepsToTake cpt a
                 fs <- queryContractId cpt fsId
                 assert $ O.isSome fs
                 assertEq (outcome $ O.fromSome fs) Success
+
+
+submitFIPAndAssertFlightSuccess : Party -> Party -> Int -> PlaneState -> Script ()
+submitFIPAndAssertFlightSuccess cpt atc distToSky plane = do
+    fipId <- submit cpt $ createFIP cpt atc plane
+    assertFlightSuccess (Left fipId) distToSky cpt atc

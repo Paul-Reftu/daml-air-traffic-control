@@ -4,7 +4,10 @@ module Types.Plane.Request (
     trySatisfyingRequest
 ) where
 
-import DA.List (head)
+import DA.List      (head)
+
+
+import Exceptions.IllegalMovementRequest (IllegalMovementRequest(..))
 
 import States.AirfieldState (AirfieldState(..), isGateAvailable, getAvailableTaxiways, getAvailableRunways)
 import States.PlaneState    (PlaneState(..))
@@ -37,21 +40,22 @@ nextRequest ps = case (psLocation ps, psObjective ps) of
     (Gate _, Arrive _)    -> None
 
 
-trySatisfyingRequest : Request -> PlaneState -> AirfieldState -> Optional Location
+trySatisfyingRequest : Request -> PlaneState -> AirfieldState -> Either IllegalMovementRequest Location
 trySatisfyingRequest request plane airfield = case (psLocation plane, psObjective plane, request) of
     -- DEPARTURES
     (Gate _, Depart, RequestForTaxiway)   -> firstAvailableTaxiway
     (Taxiway _, Depart, RequestForRunway) -> firstAvailableRunway
-    (Runway _, Depart, RequestForTakeOff) -> Some Sky
+    (Runway _, Depart, RequestForTakeOff) -> Right Sky
     
     -- ARRIVALS
     (Sky, Arrive _, RequestForRunway)       -> firstAvailableRunway
     (Runway _, Arrive _, RequestForTaxiway) -> firstAvailableTaxiway
     (Taxiway _, Arrive i, RequestForGate j) ->
-        if i /= j || not (isGateAvailable i airfield) then None
-        else Some $ Gate i
+        if i /= j then Left ImpossibleTransition
+        else if not (isGateAvailable i airfield) then Left GateOccupied
+        else Right $ Gate i
     
-    _ -> None
+    _ -> Left ImpossibleTransition
     where
         availableTaxiways : [TaxiwayId]
         availableTaxiways = getAvailableTaxiways airfield
@@ -59,12 +63,12 @@ trySatisfyingRequest request plane airfield = case (psLocation plane, psObjectiv
         availableRunways : [RunwayId]
         availableRunways  = getAvailableRunways  airfield
 
-        firstAvailableTaxiway : Optional Location
+        firstAvailableTaxiway : Either IllegalMovementRequest Location
         firstAvailableTaxiway =
-            if null availableTaxiways then None
-            else Some $ Taxiway $ head availableTaxiways
+            if null availableTaxiways then Left NoTaxiwaysAvailable
+            else Right $ Taxiway $ head availableTaxiways
         
-        firstAvailableRunway : Optional Location
+        firstAvailableRunway : Either IllegalMovementRequest Location
         firstAvailableRunway =
-            if null availableRunways then None
-            else Some $ Runway $ head availableRunways
+            if null availableRunways then Left NoRunwaysAvailable
+            else Right $ Runway $ head availableRunways

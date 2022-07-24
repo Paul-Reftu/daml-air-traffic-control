@@ -8,3 +8,5 @@ data IllegalMovementRequest
     | NoTaxiwaysAvailable
     | NoRunwaysAvailable
     | ImpossibleTransition
+    | Unknown
+    deriving (Eq, Show)

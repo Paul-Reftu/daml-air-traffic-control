@@ -3,15 +3,17 @@ module Contracts.FlightInProgress (
     MovementRequest(..)
 ) where
 
+import DA.Action    (when)
 import DA.Exception (ActionThrow(throw))
 
 
 import Contracts.AirTrafficControl (AirTrafficControl(..))
 import Contracts.FlightSummary     (FlightSummary(..))
 
-import Exceptions.NoNextPlaneRequest (NoNextPlaneRequest(..))
+import Exceptions.IllegalMovementRequest (IllegalMovementRequest(..))
+import Exceptions.NoNextPlaneRequest     (NoNextPlaneRequest(..))
 
-import States.AirfieldState (updateAirfieldState)
+import States.AirfieldState (AirfieldState, updateAirfieldState)
 import States.PlaneState    (PlaneState(..))
 
 import Types.Airfield.Location (Location(..))
@@ -19,7 +21,8 @@ import Types.Departure.Outcome (Outcome(..))
 import Types.Plane.Objective   (Objective(..))
 import Types.Plane.Request     (Request(..), nextRequest, trySatisfyingRequest)
 
-import qualified DA.Optional as O (isSome, fromSome)
+import qualified DA.Either   as E (isLeft, fromLeft, fromRight)
+import qualified DA.Optional as O (isNone, fromSome)
 
 
 template FlightInProgress
@@ -46,24 +49,46 @@ template MovementRequest
     where
         signatory captain
         observer atc
-        choice ApproveMovementRequest : Either (ContractId FlightInProgress) (ContractId FlightSummary)
+        choice ProcessMovementRequest : (Either (ContractId FlightInProgress) (ContractId FlightSummary))
             controller atc
             do
                 (atcContractId, atcContract) <- fetchByKey @AirTrafficControl atc
-                let airfield         = airfieldState atcContract
-                    maybeDestination = trySatisfyingRequest request plane airfield
-                assert $ O.isSome maybeDestination
+
+                let airfield                   = airfieldState atcContract
+                    eitherExceptionDestination = trySatisfyingRequest request plane airfield
+                when (E.isLeft eitherExceptionDestination) $
+                    exercise self RejectMovementRequest with reason = E.fromLeft Unknown eitherExceptionDestination
 
                 let position         = psLocation plane
-                    destination      = O.fromSome maybeDestination
+                    destination      = E.fromRight Sky eitherExceptionDestination
                     maybeNewAirfield = updateAirfieldState airfield position destination
-                assert $ O.isSome maybeNewAirfield
+                when (O.isNone maybeNewAirfield) $
+                    exercise self RejectMovementRequest with reason = ImpossibleTransition
+                
+                exercise self ApproveMovementRequest with newAirfield = O.fromSome maybeNewAirfield; ..
+        
 
+        choice RejectMovementRequest : ()
+            with
+                reason : IllegalMovementRequest
+            controller atc
+            do
+                create RejectedMovementRequest with ..
+                archive self
+        
+
+        choice ApproveMovementRequest : Either (ContractId FlightInProgress) (ContractId FlightSummary)
+            with
+                atcContractId : ContractId AirTrafficControl
+                destination   : Location
+                newAirfield   : AirfieldState
+            controller atc
+            do
                 archive atcContractId
                 create AirTrafficControl
                     with
                         officer       = atc
-                        airfieldState = O.fromSome maybeNewAirfield
+                        airfieldState = newAirfield
 
                 let summaryResponse = do
                         response <- create FlightSummary with outcome = Success; ..
@@ -77,3 +102,13 @@ template MovementRequest
                     (Depart, _)        -> progressResponse
                     (Arrive _, Gate _) -> summaryResponse
                     (Arrive _, _)      -> progressResponse
+
+
+template RejectedMovementRequest
+    with
+        atc     : Party
+        captain : Party
+        reason  : IllegalMovementRequest
+    where
+        signatory atc
+        observer captain

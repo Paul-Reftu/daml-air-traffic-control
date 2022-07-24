@@ -1,6 +1,6 @@
-module Requests.Departure (
-    DepartureInProgress(..),
-    DepartureRequest(..)
+module Requests.FlightInProgress (
+    FlightInProgress(..),
+    MovementRequest(..)
 ) where
 
 import DA.Exception (ActionThrow(throw))
@@ -9,19 +9,20 @@ import DA.Exception (ActionThrow(throw))
 import Exceptions.NoNextPlaneRequest (NoNextPlaneRequest(..))
 
 import Models.AirTrafficControl (AirTrafficControl(..))
-import Models.Departure         (Departure(..))
+import Models.FlightSummary     (FlightSummary(..))
 
 import States.AirfieldState (updateAirfieldState)
 import States.PlaneState    (PlaneState(..))
 
 import Types.Airfield.Location (Location(..))
 import Types.Departure.Outcome (Outcome(..))
+import Types.Plane.Objective   (Objective(..))
 import Types.Plane.Request     (Request(..), nextRequest, trySatisfyingRequest)
 
 import qualified DA.Optional as O (isSome, fromSome)
 
 
-template DepartureInProgress
+template FlightInProgress
     with
         captain : Party
         atc     : Party
@@ -29,14 +30,14 @@ template DepartureInProgress
     where
         signatory captain
         observer atc
-        choice SubmitDepartureRequest : ContractId DepartureRequest
+        choice SubmitMovementRequest : ContractId MovementRequest
             controller captain
             do case nextRequest plane of
-                Some r -> create DepartureRequest  with request = r; ..
+                Some r -> create MovementRequest   with request = r; ..
                 None   -> throw NoNextPlaneRequest with planeLocation = psLocation plane
 
 
-template DepartureRequest
+template MovementRequest
     with
         captain : Party
         atc     : Party
@@ -45,7 +46,7 @@ template DepartureRequest
     where
         signatory captain
         observer atc
-        choice ApproveDepartureRequest : Either (ContractId DepartureInProgress) (ContractId Departure)
+        choice ApproveMovementRequest : Either (ContractId FlightInProgress) (ContractId FlightSummary)
             controller atc
             do
                 (atcContractId, atcContract) <- fetchByKey @AirTrafficControl atc
@@ -64,9 +65,15 @@ template DepartureRequest
                         officer       = atc
                         airfieldState = O.fromSome maybeNewAirfield
 
-                if destination /= Sky then do
-                    response <- create DepartureInProgress with plane = plane {psLocation = destination}; ..
-                    return $ Left response
-                else do
-                    response <- create Departure with outcome = Success; ..
-                    return $ Right response
+                let summaryResponse = do
+                        response <- create FlightSummary with outcome = Success; ..
+                        return $ Right response
+                    progressResponse = do
+                        response <- create FlightInProgress with plane = plane {psLocation = destination}; ..
+                        return $ Left response
+
+                case (psObjective plane, destination) of
+                    (Depart, Sky)      -> summaryResponse
+                    (Depart, _)        -> progressResponse
+                    (Arrive _, Gate _) -> summaryResponse
+                    (Arrive _, _)      -> progressResponse

@@ -1,14 +1,17 @@
-module Models.Departure (
-    Departure(..)  
+module Models.FlightSummary (
+    FlightSummary(..)  
 ) where
+
+import States.PlaneState (PlaneState)
 
 import Types.Departure.Outcome (Outcome)
 
 
-template Departure
+template FlightSummary
     with
         captain : Party
         atc     : Party
+        plane   : PlaneState
         outcome : Outcome
     where
         signatory captain

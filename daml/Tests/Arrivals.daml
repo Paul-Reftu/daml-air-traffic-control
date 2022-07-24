@@ -1,0 +1,37 @@
+module Tests.Arrivals (
+    test
+) where
+
+import Daml.Script
+
+import States.PlaneState (PlaneState(..))
+
+import Tests.Util (distSkyToGate, submitFIPAndAssertFlightSuccess)
+
+import Types.Airfield.Location (Location(..))
+import Types.Ids               (GateId(..))
+import Types.Plane.Objective   (Objective(..))
+
+import qualified DA.Foldable as F (forA_)
+
+
+planeSkyToG1, planeSkyToG2, planeSkyToG3, planeSkyToG4 : PlaneState
+planeSkyToG1 = PlaneState Sky $ Arrive (GateId 1)
+planeSkyToG2 = PlaneState Sky $ Arrive (GateId 2)
+planeSkyToG3 = PlaneState Sky $ Arrive (GateId 3)
+planeSkyToG4 = PlaneState Sky $ Arrive (GateId 4)
+
+
+planesInSky : [PlaneState]
+planesInSky = [planeSkyToG1, planeSkyToG2, planeSkyToG3, planeSkyToG4]
+
+
+test : Party -> Party -> Script ()
+test cpt atc = script $
+    testPlanesCanArriveAtAnyGate cpt atc
+
+
+testPlanesCanArriveAtAnyGate : Party -> Party -> Script ()
+testPlanesCanArriveAtAnyGate cpt atc =
+    F.forA_ planesInSky $ \plane ->
+        submitFIPAndAssertFlightSuccess cpt atc distSkyToGate plane

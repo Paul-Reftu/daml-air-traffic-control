@@ -1,0 +1,22 @@
+module Tests.Main (
+    test
+) where
+
+import Daml.Script
+
+import Tests.Util (createATC)
+
+import States.AirfieldState (initAirfieldState)
+
+import qualified Tests.Arrivals   as TA (test)
+import qualified Tests.Departures as TD (test)
+
+
+test : Script ()
+test = script $ do
+    andrew <- allocateParty "ATC Officer Andrew"
+    paul   <- allocateParty "Captain Paul"
+    submit andrew $ createATC andrew initAirfieldState
+
+    TA.test paul andrew
+    TD.test paul andrew

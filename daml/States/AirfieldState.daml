@@ -39,7 +39,7 @@ data AirfieldState = AirfieldState
 isGateAvailable : GateId -> AirfieldState -> Bool
 isGateAvailable gateId state =
     let gates = asGateIdToOccupancy state
-    in  M.member gateId gates && M.lookup gateId gates == Some True
+    in  M.member gateId gates && M.lookup gateId gates == Some False
 
 getAvailableTaxiways : AirfieldState -> [TaxiwayId]
 getAvailableTaxiways =

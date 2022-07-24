@@ -1,4 +1,6 @@
 module Tests.Util (
+    distGateToSky,
+    distSkyToGate,
     createATC,
     createFIP,
     assertFlightSuccess,
@@ -21,6 +23,11 @@ import Types.Departure.Outcome (Outcome(..))
 
 import qualified DA.Either   as E (lefts, rights)
 import qualified DA.Optional as O (isSome, fromSome)
+
+
+distGateToSky, distSkyToGate : Int
+distGateToSky = 3
+distSkyToGate = distGateToSky
 
 
 createATC : Party -> AirfieldState -> Commands (ContractId AirTrafficControl)

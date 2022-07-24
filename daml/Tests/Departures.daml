@@ -4,10 +4,9 @@ module Tests.Departures (
 
 import Daml.Script
 
-import States.AirfieldState (initAirfieldState)
 import States.PlaneState    (PlaneState(..))
 
-import Tests.Util (createATC, createFIP, assertFlightSuccess, submitFIPAndAssertFlightSuccess)
+import Tests.Util (distGateToSky, submitFIPAndAssertFlightSuccess)
 
 import Types.Airfield.Location (Location(..))
 import Types.Ids               (GateId(..))
@@ -27,20 +26,10 @@ planesAtGates : [PlaneState]
 planesAtGates = [planeG1, planeG2, planeG3, planeG4]
 
 
-distGateToSky, distTaxiwayToSky, distRunwayToSky : Int
-distGateToSky    = 3
-distTaxiwayToSky = 2
-distRunwayToSky  = 1
-
-
-test : Script ()
-test = script $ do
-    andrew <- allocateParty "ATC Officer Andrew"
-    paul   <- allocateParty "Captain Paul"
-    submit andrew $ createATC andrew initAirfieldState
-
-    testAnyNumberOfPlanesCanDepartConsecutivelyFromG1 paul andrew
-    testAnyNumberOfPlanesCanDepartConsecutivelyFromAnyGate paul andrew
+test : Party -> Party -> Script ()
+test cpt atc = script $ do
+    testAnyNumberOfPlanesCanDepartConsecutivelyFromG1 cpt atc
+    testAnyNumberOfPlanesCanDepartConsecutivelyFromAnyGate cpt atc
 
 
 testAnyNumberOfPlanesCanDepartConsecutivelyFromG1 : Party -> Party -> Script ()

@@ -1,0 +1,14 @@
+P=? [ G ((s=1&imminentLand)|(s2=1&imminentLand2)|(s3=1&imminentLand3)|(s4=1&imminentLand4))=>ctr_taxiway2Planes<2 ]
+
+P=? [ F ctr_taxiway1Planes=2|ctr_taxiway2Planes=2 ]
+
+P=? [ F ctr_runwayPlanes=2 ]
+
+P=? [ G (s=2 | s=8) => (s=2)]
+
+P=? [ G (s=2 | s=8) => (s=8)]
+
+P=? [ G (s=7 | s=9) => (s=7)]
+
+P=? [ G (s=7 | s=9) => (s=9)]
+

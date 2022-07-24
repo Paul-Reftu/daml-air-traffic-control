@@ -1,5 +1,17 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/digital-asset/daml/blob/main/LICENSE)
 
+# Air Traffic Control DAML Model
+
+![air-traffic-control-workflow drawio-5](https://user-images.githubusercontent.com/47919865/180663689-6b1f0f0e-4255-4459-9b37-ca55341ee104.png)
+
+DAML prototype for an ATC system. Allows modelling for an arbitrary number of gates, taxiways, runways and planes. Exceptions handled appropriately and test suite for flight departures and arrivals provided.
+
+Further, we supply a PRISM model for formal verification, see program graph below and `prism` for more information.
+
+![Bild 24 07 22 um 22 02](https://user-images.githubusercontent.com/47919865/180663869-f47e4f7f-d66d-4ed9-90ee-69f77ead7ba3.jpg)
+
+The rest of this README contains auto-generated instructions for development setup.
+
 # air-traffic-control
 
 See [documentation] for details.

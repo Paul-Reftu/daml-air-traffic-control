@@ -1,4 +1,4 @@
-module Models.AirTrafficControl (
+module Contracts.AirTrafficControl (
     AirTrafficControl(..)
 ) where
 

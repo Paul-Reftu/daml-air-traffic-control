@@ -1,4 +1,4 @@
-module Requests.FlightInProgress (
+module Contracts.FlightInProgress (
     FlightInProgress(..),
     MovementRequest(..)
 ) where
@@ -6,10 +6,10 @@ module Requests.FlightInProgress (
 import DA.Exception (ActionThrow(throw))
 
 
-import Exceptions.NoNextPlaneRequest (NoNextPlaneRequest(..))
+import Contracts.AirTrafficControl (AirTrafficControl(..))
+import Contracts.FlightSummary     (FlightSummary(..))
 
-import Models.AirTrafficControl (AirTrafficControl(..))
-import Models.FlightSummary     (FlightSummary(..))
+import Exceptions.NoNextPlaneRequest (NoNextPlaneRequest(..))
 
 import States.AirfieldState (updateAirfieldState)
 import States.PlaneState    (PlaneState(..))

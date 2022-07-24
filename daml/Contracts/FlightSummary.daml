@@ -1,4 +1,4 @@
-module Models.FlightSummary (
+module Contracts.FlightSummary (
     FlightSummary(..)  
 ) where
 

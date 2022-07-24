@@ -1,0 +1,10 @@
+module Exceptions.IllegalMovementRequest (
+    IllegalMovementRequest(..)
+) where
+
+
+data IllegalMovementRequest
+    = GateOccupied
+    | NoTaxiwaysAvailable
+    | NoRunwaysAvailable
+    | ImpossibleTransition
